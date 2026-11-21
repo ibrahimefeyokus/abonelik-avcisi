@@ -46,12 +46,14 @@ uygulamaya yalnızca kendi yazdığı bilgiler girer, finansal mesajları okunma
    └─────────────────────────────┘
    ```
    Ekleme/düzenleme ve Kartlar sekmesinin düzeni geliştiriciye kalır (taslağın sade, kart tabanlı diline uygun).
+9. **Ana ekran widget'ı (kullanıcı isteği):** Glance ile, varsayılan 2x2 (4x2'ye büyütülebilir). Üstte "Aylık toplam"
+   ve tutar; altında yaklaşan ilk 2 öğe (ad + "yarın / N gün"; 4x2'de tutar da). Dokununca uygulama açılır. Veri her
+   değiştiğinde ve günlük hatırlatma alarmında güncellenir. Hiç abonelik yoksa "Abonelik ekle" yazar.
 8. **Kurulum bandı:** bildirim izni yoksa ya da Realme pil kısıtlaması açıksa üstte "Hatırlatmalar için kurulum eksik"
    bandı (park asistanındaki yaklaşım).
 
 ## Kapsam dışı (ilk sürüm)
-SMS/bildirim/e-posta okuma; internetten kur çekme; aboneliği uygulamadan iptal etme; deneme süresi takibi; ana ekran
-widget'ı; fiyat geçmişi/grafikler; yedekleme/dışa aktarma; Play Store; iPhone.
+SMS/bildirim/e-posta okuma; internetten kur çekme; aboneliği uygulamadan iptal etme; deneme süresi takibi; fiyat geçmişi/grafikler; yedekleme/dışa aktarma; Play Store; iPhone.
 
 ## Anti-hedefler
 - Hassas veri toplamak: kart numarası, banka adı zorunlu alanı, internet erişimi yok.
