@@ -18,6 +18,7 @@ data class SubForm(
     val cardId: String? = null,
     val color: Int = 0,
     val paused: Boolean = false,
+    val icon: String = "",
 ) {
     fun validate(): Map<String, String> = buildMap {
         if (name.isBlank()) put("name", "Ad gerekli")
@@ -40,6 +41,7 @@ data class SubForm(
         cardId = cardId,
         color = color,
         paused = paused,
+        icon = icon,
     )
 
     companion object {
@@ -54,6 +56,7 @@ data class SubForm(
             cardId = s.cardId,
             color = s.color,
             paused = s.paused,
+            icon = s.icon,
         )
     }
 }

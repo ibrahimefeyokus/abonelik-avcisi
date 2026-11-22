@@ -110,6 +110,8 @@ fun SubEditor(
                 "Hangi karttan? (isteğe bağlı)", cards.firstOrNull { it.id == form.cardId }?.name ?: "Kart yok",
                 listOf("Kart yok") + cards.map { it.name }, null,
             ) { i -> set(form.copy(cardId = if (i == 0) null else cards[i - 1].id)) }
+            Text("Simge", style = MaterialTheme.typography.labelLarge)
+            IconPicker(form.name, form.color, form.icon) { set(form.copy(icon = it)) }
             Text("Renk", style = MaterialTheme.typography.labelLarge)
             ColorPicker(form.color) { set(form.copy(color = it)) }
             if (existing != null) {
@@ -201,9 +203,10 @@ fun Dropdown(
 
 /** Ekran döndürmede form kaybolmasın. */
 val SubFormSaver = androidx.compose.runtime.saveable.listSaver<SubForm, Any?>(
-    save = { listOf(it.name, it.amount, it.currency.name, it.rate, it.period.name, it.day, it.month, it.cardId, it.color, it.paused) },
+    save = { listOf(it.name, it.amount, it.currency.name, it.rate, it.period.name, it.day, it.month, it.cardId, it.color, it.paused, it.icon) },
     restore = {
         SubForm(it[0] as String, it[1] as String, Currency.valueOf(it[2] as String), it[3] as String,
-            Period.valueOf(it[4] as String), it[5] as String, it[6] as Int?, it[7] as String?, it[8] as Int, it[9] as Boolean)
+            Period.valueOf(it[4] as String), it[5] as String, it[6] as Int?, it[7] as String?, it[8] as Int, it[9] as Boolean,
+            it.getOrNull(10) as? String ?: "")
     },
 )

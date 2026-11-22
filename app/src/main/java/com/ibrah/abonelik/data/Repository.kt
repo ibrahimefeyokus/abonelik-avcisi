@@ -50,11 +50,11 @@ private fun SubEntity.toModel() = Sub(
     runCatching { Currency.valueOf(currency) }.getOrDefault(Currency.TRY),
     fxRateMilli,
     runCatching { Period.valueOf(period) }.getOrDefault(Period.MONTHLY),
-    day, month, cardId, color, paused,
+    day, month, cardId, color, paused, icon,
 )
 
 private fun Sub.toEntity() = SubEntity(
-    id, name, amountKurus, currency.name, fxRateMilli, period.name, day, month, cardId, color, paused,
+    id, name, amountKurus, currency.name, fxRateMilli, period.name, day, month, cardId, color, paused, icon,
 )
 
 private fun CardEntity.toModel() = Card(id, name, statementDay, dueDay, color)

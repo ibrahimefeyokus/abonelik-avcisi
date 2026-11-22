@@ -44,7 +44,7 @@ class FormsTest {
     }
 
     @Test fun form_round_trips_from_sub() {
-        val s = Sub("x", "ChatGPT", 2000, Currency.USD, 34250, Period.YEARLY, 5, 6, "c", 4, true)
+        val s = Sub("x", "ChatGPT", 2000, Currency.USD, 34250, Period.YEARLY, 5, 6, "c", 4, true, icon = "cloud")
         assertEquals(s, SubForm.from(s).toSub("x"))
     }
 

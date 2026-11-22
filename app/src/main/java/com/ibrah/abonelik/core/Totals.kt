@@ -40,6 +40,21 @@ object Totals {
         }
     }
 
+    /** Dağılım dilimi; [sub] null ise "Diğer". */
+    data class Slice(val sub: Sub?, val monthlyKurus: BigDecimal, val fraction: Double)
+
+    /** En pahalı [top] etkin abonelik (aylık karşılığa göre) ve gerisi tek "Diğer" dilimi. */
+    fun breakdown(subs: List<Sub>, top: Int = 3): List<Slice> {
+        val items = subs.filterNot { it.paused }.map { it to monthlyOf(it) }.filter { it.second.signum() > 0 }
+            .sortedByDescending { it.second }
+        val total = items.fold(BigDecimal.ZERO) { a, p -> a.add(p.second) }
+        if (total.signum() == 0) return emptyList()
+        fun frac(v: BigDecimal) = v.divide(total, MC).toDouble()
+        val head = items.take(top).map { (s, v) -> Slice(s, v, frac(v)) }
+        val rest = items.drop(top).fold(BigDecimal.ZERO) { a, p -> a.add(p.second) }
+        return if (rest.signum() > 0) head + Slice(null, rest, frac(rest)) else head
+    }
+
     /** Karta bağlı etkin aboneliklerden bu ekstre dönemine düşen ödemelerin toplamı. */
     fun onStatement(card: Card, subs: List<Sub>, statement: LocalDate): BigDecimal {
         val p = Schedule.period(card, statement)

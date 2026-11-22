@@ -18,6 +18,8 @@ data class Sub(
     val cardId: String?,
     val color: Int,
     val paused: Boolean,
+    /** Simge anahtarı (ör. "music"); boşsa adın baş harfi gösterilir. */
+    val icon: String = "",
 )
 
 /** Kredi kartı: yalnızca kullanıcının verdiği ad ve günler; kart numarası tutulmaz. */

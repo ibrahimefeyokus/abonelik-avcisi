@@ -1,6 +1,8 @@
 package com.ibrah.abonelik.data
 
 import android.content.Context
+import androidx.room.AutoMigration
+import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Entity
@@ -25,6 +27,7 @@ data class SubEntity(
     val cardId: String?,
     val color: Int,
     val paused: Boolean,
+    @ColumnInfo(defaultValue = "") val icon: String = "",
 )
 
 @Entity(tableName = "cards")
@@ -61,7 +64,13 @@ interface AppDao {
     @Query("DELETE FROM sent_reminders WHERE sentOn < :beforeEpochDay") suspend fun pruneSent(beforeEpochDay: Long)
 }
 
-@Database(entities = [SubEntity::class, CardEntity::class, SentEntity::class], version = 1, exportSchema = true)
+/** v2: aboneliğe simge eklendi (otomatik geçiş, eski veriler korunur). */
+@Database(
+    entities = [SubEntity::class, CardEntity::class, SentEntity::class],
+    version = 2,
+    exportSchema = true,
+    autoMigrations = [AutoMigration(from = 1, to = 2)],
+)
 abstract class AppDb : RoomDatabase() {
     abstract fun dao(): AppDao
 

@@ -6,6 +6,11 @@ enum class ThemeMode(val label: String) {
     fun isDark(systemDark: Boolean) = when (this) { SYSTEM -> systemDark; LIGHT -> false; DARK -> true }
 }
 
+/** Hatırlatmaların sağlıklı çalışması için telefon tarafı kurulum durumu. */
+data class SetupState(val notifications: Boolean, val battery: Boolean, val autoStart: Boolean) {
+    val missing: Int get() = listOf(notifications, battery, autoStart).count { !it }
+}
+
 /** Bildirimin nasıl iletileceği: kanal seçimi ve uygulama içi aç/kapa. */
 object Delivery {
     /**

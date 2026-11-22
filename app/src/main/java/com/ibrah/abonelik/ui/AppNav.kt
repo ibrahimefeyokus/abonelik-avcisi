@@ -66,6 +66,7 @@ fun AppNav() {
     var editingSub by rememberSaveable { mutableStateOf<String?>(null) }   // id ya da NEW
     var editingCard by rememberSaveable { mutableStateOf<String?>(null) }
     var showSettings by rememberSaveable { mutableStateOf(false) }
+    var showSetup by rememberSaveable { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
     val today = LocalDate.now()
 
@@ -116,6 +117,10 @@ fun AppNav() {
         )
         return
     }
+    if (showSetup) {
+        SetupScreen(settings, onGranted = { catchUp() }, onClose = { showSetup = false })
+        return
+    }
     if (showSettings) {
         SettingsScreen(
             settings,
@@ -164,7 +169,10 @@ fun AppNav() {
         if (tab == 0) {
             HomeScreen(
                 subs, cards, today,
-                banner = { SetupBanner(settings, onGranted = { catchUp() }) },
+                banner = {
+                    val (setup, _) = rememberSetupState(settings)
+                    SetupRow(setup, onOpen = { showSetup = true })
+                },
                 onAdd = { editingSub = NEW },
                 onOpen = { editingSub = it.id },
                 onOpenCard = { editingCard = it.id },

@@ -43,6 +43,11 @@ class RepositoryTest {
         assertEquals(listOf("Apple", "Şahane"), repo.subs.first().map { it.name })
     }
 
+    @Test fun icon_is_saved() = runTest {
+        repo.saveSub(sub("1", "Spotify").copy(icon = "music"))
+        assertEquals("music", repo.subs.first().single().icon)
+    }
+
     @Test fun deleting_card_keeps_subscriptions_without_card() = runTest {
         repo.saveCard(Card("c", "Bonus", 25, 5, 1))
         repo.saveSub(sub("1", "Netflix", card = "c"))

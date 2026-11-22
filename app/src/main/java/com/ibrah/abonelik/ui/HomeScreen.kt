@@ -8,6 +8,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.RoundedCornerShape
+import kotlin.math.roundToInt
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -45,6 +49,7 @@ import com.ibrah.abonelik.ui.theme.AppColors
 import java.time.LocalDate
 
 private const val UPCOMING_SHOWN = 6
+private val DAY_MONTH = java.time.format.DateTimeFormatter.ofPattern("d MMMM", java.util.Locale.forLanguageTag("tr-TR"))
 
 @Composable
 fun HomeScreen(
@@ -61,7 +66,7 @@ fun HomeScreen(
     val upcoming = Upcoming.list(subs, cards, today)
     LazyColumn(modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp)) {
         item { banner() }
-        item { TotalCard(Money.format(Totals.monthlyKurus(subs)), Money.format(Totals.yearlyKurus(subs)), active) }
+        item { TotalCard(Money.format(Totals.monthlyKurus(subs)), Money.format(Totals.yearlyKurus(subs)), active, Totals.breakdown(subs)) }
 
         if (upcoming.isNotEmpty()) {
             item { SectionTitle("Yaklaşanlar") }
@@ -96,7 +101,7 @@ fun HomeScreen(
 }
 
 @Composable
-private fun TotalCard(monthly: String, yearly: String, count: Int) {
+private fun TotalCard(monthly: String, yearly: String, count: Int, slices: List<Totals.Slice>) {
     Surface(
         Modifier.fillMaxWidth().padding(top = 8.dp), shape = MaterialTheme.shapes.large,
         // Koyu temada da marka yeşili: açık nane rengi üstünde beyaz yazı okunmuyordu.
@@ -109,6 +114,38 @@ private fun TotalCard(monthly: String, yearly: String, count: Int) {
                 "yılda $yearly · $count abonelik", color = Color.White.copy(alpha = 0.85f),
                 style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 6.dp),
             )
+            if (slices.size >= 2) Breakdown(slices)
+        }
+    }
+}
+
+/** Paranın nereye gittiği: oranlı çubuk + en pahalı 3 ve "Diğer". */
+@Composable
+private fun Breakdown(slices: List<Totals.Slice>) {
+    // Yeşil kart üstünde aboneliklerin kendi renkleri (özellikle yeşiller) kayboluyordu: beyazın tonları,
+    // en pahalı en parlak; "Diğer" en soluk.
+    val shades = listOf(1f, 0.7f, 0.45f)
+    fun colorOf(s: Totals.Slice) =
+        if (s.sub == null) Color.White.copy(alpha = 0.22f) else Color.White.copy(alpha = shades.getOrElse(slices.indexOf(s)) { 0.3f })
+    Row(
+        Modifier.fillMaxWidth().padding(top = 16.dp).height(10.dp).clip(RoundedCornerShape(5.dp)),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        slices.forEach { s ->
+            Box(Modifier.weight(s.fraction.toFloat().coerceAtLeast(0.01f)).fillMaxHeight().background(colorOf(s)))
+        }
+    }
+    Column(Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        slices.forEach { s ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(8.dp).clip(CircleShape).background(colorOf(s)))
+                Text(s.sub?.name ?: "Diğer", color = Color.White, style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 8.dp).weight(1f))
+                Text("%${(s.fraction * 100).roundToInt()}", color = Color.White.copy(alpha = 0.75f),
+                    style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 8.dp))
+                Text(Money.format(s.monthlyKurus), color = Color.White, style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold)
+            }
         }
     }
 }
@@ -119,7 +156,7 @@ private fun UpcomingRow(u: UpcomingItem, today: LocalDate, onOpen: (Sub) -> Unit
     val soon = u.date <= today.plusDays(1)
     when (u) {
         is UpcomingItem.Renewal -> ListRow(
-            leading = { Initial(u.sub.name, u.sub.color) },
+            leading = { SubAvatar(u.sub.name, u.sub.color, u.sub.icon) },
             title = u.sub.name, subtitle = "yenileniyor · $label", soon = soon,
             trailing = ReminderText.amountText(u.sub).substringBefore(" ≈"),
             onClick = { onOpen(u.sub) },
@@ -132,7 +169,7 @@ private fun UpcomingRow(u: UpcomingItem, today: LocalDate, onOpen: (Sub) -> Unit
         )
         is UpcomingItem.Due -> ListRow(
             leading = { IconCircle(Icons.Filled.EventAvailable, paletteColor(u.card.color)) },
-            title = "${u.card.name} son ödeme", subtitle = label, soon = soon, trailing = null,
+            title = "${u.card.name} son ödeme", subtitle = "${DAY_MONTH.format(u.date)} · $label", soon = soon, trailing = null,
             onClick = { onOpenCard(u.card) },
         )
     }
@@ -141,9 +178,11 @@ private fun UpcomingRow(u: UpcomingItem, today: LocalDate, onOpen: (Sub) -> Unit
 @Composable
 private fun SubRow(s: Sub, card: Card?, onOpen: (Sub) -> Unit) {
     val period = if (s.period == Period.MONTHLY) "her ayın ${Turkish.dayWithSuffix(s.day)}" else "${s.day} ${MONTHS_TR[(s.month ?: 1) - 1]}"
-    val sub = listOfNotNull(s.period.label, period, card?.name, if (s.paused) "duraklatıldı" else null).joinToString(" · ")
+    // Yıllıklarda aylık karşılık da görünsün: "yıllık · 15 Mart · ≈ 39,08 TL/ay".
+    val perMonth = if (s.period == Period.YEARLY && !s.paused) "≈ ${Money.format(Totals.monthlyOf(s))}/ay" else null
+    val sub = listOfNotNull(s.period.label, period, perMonth, card?.name, if (s.paused) "duraklatıldı" else null).joinToString(" · ")
     ListRow(
-        leading = { Initial(s.name, s.color, dim = s.paused) },
+        leading = { SubAvatar(s.name, s.color, s.icon, dim = s.paused) },
         title = s.name, subtitle = sub, soon = false,
         trailing = ReminderText.amountText(s).substringBefore(" ≈"), dim = s.paused,
         onClick = { onOpen(s) },
