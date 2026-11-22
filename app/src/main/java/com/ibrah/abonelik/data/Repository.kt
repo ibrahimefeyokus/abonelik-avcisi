@@ -36,7 +36,11 @@ class Repository(private val db: AppDb) {
     companion object {
         @Volatile private var instance: Repository? = null
         fun get(context: Context): Repository = instance ?: synchronized(this) {
-            instance ?: Repository(AppDb.get(context)).also { instance = it }
+            instance ?: Repository(AppDb.get(context)).also { r ->
+                val app = context.applicationContext
+                r.onChange = { com.ibrah.abonelik.widget.WidgetUpdater.update(app) }
+                instance = r
+            }
         }
     }
 }

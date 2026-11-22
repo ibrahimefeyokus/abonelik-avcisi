@@ -27,8 +27,6 @@ import kotlinx.coroutines.sync.withLock
  */
 object CatchUp {
     private val lock = Mutex()
-    /** Widget güncellemesi gibi ek işler (Task 9'da bağlanır). */
-    var afterRun: suspend (Context) -> Unit = {}
 
     suspend fun run(context: Context, now: LocalDateTime = LocalDateTime.now()) = lock.withLock {
         val ctx = context.applicationContext
@@ -52,7 +50,8 @@ object CatchUp {
             repo.pruneSent(today.minusDays(30))
         }
         DailyAlarm.schedule(ctx, AlarmTime.next(now, settings.time))
-        afterRun(ctx)
+        // Gün değişince "yarın / N gün" etiketleri ve yaklaşanlar widget'ta da güncellensin.
+        com.ibrah.abonelik.widget.WidgetUpdater.update(ctx)
     }
 
     /** Alıcılardan çağrılır: goAsync ile süreç işi bitene kadar canlı kalır. */

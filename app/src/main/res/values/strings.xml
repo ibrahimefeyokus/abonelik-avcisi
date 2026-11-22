@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Abonelik Avcısı</string>
+    <string name="widget_description">Aylık toplam ve yaklaşan ödemeler</string>
 </resources>
