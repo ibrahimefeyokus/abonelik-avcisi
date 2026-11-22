@@ -39,7 +39,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.ibrah.abonelik.core.AppMatch
 import com.ibrah.abonelik.core.Card
+import com.ibrah.abonelik.core.IconKey
 import com.ibrah.abonelik.core.Currency
 import com.ibrah.abonelik.core.Money
 import com.ibrah.abonelik.core.Period
@@ -78,6 +80,16 @@ fun SubEditor(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Field("Ad", form.name, errors["name"], placeholder = "Netflix, Spotify, fatura…") { set(form.copy(name = it)) }
+            // Ad telefondaki bir uygulamayla eşleşiyorsa onun simgesini öner (seçili değilse).
+            val apps = rememberInstalledApps()
+            val match = remember(form.name, apps) { AppMatch.best(form.name, apps) }
+            if (match != null && IconKey.appPackage(form.icon) != match.pkg) {
+                androidx.compose.material3.AssistChip(
+                    onClick = { set(form.copy(icon = IconKey.forApp(match.pkg))) },
+                    label = { Text("${match.label} simgesini kullan") },
+                    leadingIcon = { AppIconImage(match.pkg, 20.dp) {} },
+                )
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
                 Field("Tutar", form.amount, errors["amount"], KeyboardType.Decimal, "229,99", Modifier.weight(1f)) {
                     set(form.copy(amount = it))

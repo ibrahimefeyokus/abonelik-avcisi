@@ -33,6 +33,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.filled.Apps
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -62,10 +67,21 @@ object SubIcons {
     fun get(key: String): ImageVector? = all[key]?.first
 }
 
-/** Simge seçici: ilk seçenek "harf" (boş anahtar). */
+/** Simge seçici: telefondaki uygulama, baş harf ve genel simgeler. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun IconPicker(name: String, color: Int, selected: String, onSelect: (String) -> Unit) {
+    var choosing by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val appPkg = com.ibrah.abonelik.core.IconKey.appPackage(selected)
+    if (choosing) AppChooserSheet(
+        onPick = { onSelect(com.ibrah.abonelik.core.IconKey.forApp(it.pkg)); choosing = false },
+        onDismiss = { choosing = false },
+    )
+    androidx.compose.material3.OutlinedButton(onClick = { choosing = true }, modifier = Modifier.padding(bottom = 10.dp)) {
+        if (appPkg != null) AppIconImage(appPkg, 22.dp) {}
+        else Icon(androidx.compose.material.icons.Icons.Filled.Apps, null, modifier = Modifier.size(20.dp))
+        Text(if (appPkg != null) "  Uygulama simgesi seçili · değiştir" else "  Telefondaki uygulamadan seç")
+    }
     FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         PickerCell(selected.isEmpty(), { onSelect("") }) {
             Text(name.trim().take(1).uppercase(java.util.Locale.forLanguageTag("tr-TR")).ifEmpty { "A" },
@@ -93,6 +109,13 @@ private fun PickerCell(selected: Boolean, onClick: () -> Unit, content: @Composa
 /** Liste satırı simgesi: seçili simge ya da baş harf, aboneliğin renginde daire içinde. */
 @Composable
 fun SubAvatar(name: String, color: Int, icon: String, size: androidx.compose.ui.unit.Dp = 40.dp, dim: Boolean = false) {
+    // Telefondaki uygulamanın kendi simgesi; uygulama silinmişse baş harf.
+    com.ibrah.abonelik.core.IconKey.appPackage(icon)?.let { pkg ->
+        Box(Modifier.size(size).then(if (dim) Modifier.graphicsLayer(alpha = 0.4f) else Modifier)) {
+            AppIconImage(pkg, size) { Initial(name, color, size, dim) }
+        }
+        return
+    }
     val vec = SubIcons.get(icon)
     if (vec == null) { Initial(name, color, size, dim); return }
     Box(
