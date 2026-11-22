@@ -6,6 +6,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.ibrah.abonelik.core.AlarmTime
+import com.ibrah.abonelik.core.Delivery
 import com.ibrah.abonelik.core.Kind
 import com.ibrah.abonelik.core.ReminderPlanner
 import com.ibrah.abonelik.core.Totals
@@ -42,21 +43,21 @@ object CatchUp {
         DailyAlarm.schedule(ctx, AlarmTime.next(now, settings.time))
         val subs = repo.subsNow()
         val cards = repo.cardsNow()
-        // Bildirim izni yoksa hiçbir şey "gönderildi" sayılmaz; izin verilince telafi edilir.
-        if (Notifications.enabled(ctx)) {
-            val today = now.toLocalDate()
-            val due = ReminderPlanner.due(subs, cards, settings, now, repo.sentKeys())
-            val shown = due.mapNotNull { r ->
-                val sub = subs.firstOrNull { it.id == r.itemId && r.kind == Kind.SUB }
-                val card = cards.firstOrNull { it.id == r.itemId && r.kind != Kind.SUB }
-                val st = if (r.kind == Kind.STATEMENT && card != null) Totals.onStatement(card, subs, r.eventDate) else null
-                val text = ReminderText.of(r, sub, card, st, today) ?: return@mapNotNull r.key // silinmiş öğe: sessizce kapat
-                Notifications.show(ctx, r.key.hashCode(), text.first, text.second)
-                r.key
+        val today = now.toLocalDate()
+        val due = ReminderPlanner.due(subs, cards, settings, now, repo.sentKeys())
+        // Uygulamadan kapalıysa: gösterme, "geçti" say. Telefon engelliyorsa: gösterme, sayma (sonra telafi).
+        val plan = Delivery.plan(due, settings.notificationsOn,
+            systemAllows = settings.notificationsOn && Notifications.systemAllows(ctx, settings))
+        plan.show.forEach { r ->
+            val sub = subs.firstOrNull { it.id == r.itemId && r.kind == Kind.SUB }
+            val card = cards.firstOrNull { it.id == r.itemId && r.kind != Kind.SUB }
+            val st = if (r.kind == Kind.STATEMENT && card != null) Totals.onStatement(card, subs, r.eventDate) else null
+            ReminderText.of(r, sub, card, st, today)?.let { (title, body) ->
+                Notifications.show(ctx, settings, r.key.hashCode(), title, body)
             }
-            if (shown.isNotEmpty()) repo.markSent(shown, today)
-            repo.pruneSent(today.minusDays(30))
         }
+        if (plan.markSent.isNotEmpty()) repo.markSent(plan.markSent.map { it.key }, today)
+        repo.pruneSent(today.minusDays(30))
         // Gün değişince "yarın / N gün" etiketleri ve yaklaşanlar widget'ta da güncellensin.
         com.ibrah.abonelik.widget.WidgetUpdater.update(ctx)
     }

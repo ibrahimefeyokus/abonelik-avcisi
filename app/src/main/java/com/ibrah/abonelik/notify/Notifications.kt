@@ -9,41 +9,52 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.ibrah.abonelik.MainActivity
 import com.ibrah.abonelik.R
+import com.ibrah.abonelik.core.Delivery
+import com.ibrah.abonelik.core.ReminderSettings
 
 object Notifications {
-    const val CHANNEL = "hatirlatmalar"
-
-    fun ensureChannel(ctx: Context) {
+    /**
+     * Ses/titreşim ayarına uygun kanalı oluşturur, diğerlerini siler (telefonun ayarlarında tek
+     * "Hatırlatmalar" kanalı görünsün). Android kanal sesini sonradan değiştirmeye izin vermediği için
+     * her birleşim ayrı kanaldır.
+     */
+    fun ensureChannel(ctx: Context, s: ReminderSettings): String {
         val nm = ctx.getSystemService(NotificationManager::class.java)
+        val id = Delivery.channelId(s.sound, s.vibrate)
+        (Delivery.allChannelIds + Delivery.legacyChannelIds).filter { it != id }.forEach { nm.deleteNotificationChannel(it) }
         nm.createNotificationChannel(
-            NotificationChannel(CHANNEL, "Hatırlatmalar", NotificationManager.IMPORTANCE_DEFAULT).apply {
+            NotificationChannel(id, "Hatırlatmalar", NotificationManager.IMPORTANCE_DEFAULT).apply {
                 description = "Abonelik yenilemeleri, ekstre kesimi ve son ödeme"
                 lockscreenVisibility = NotificationCompat.VISIBILITY_PRIVATE
+                if (!s.sound) setSound(null, null)
+                enableVibration(s.vibrate)
+                if (s.vibrate) vibrationPattern = longArrayOf(0, 250, 150, 250)
             },
         )
+        return id
     }
 
-    /** Uygulama bildirimleri açık VE "Hatırlatmalar" kanalı kapatılmamış. */
-    fun enabled(ctx: Context): Boolean {
+    /** Telefon tarafı izin veriyor mu: uygulama bildirimleri açık VE kanal kapatılmamış. */
+    fun systemAllows(ctx: Context, s: ReminderSettings): Boolean {
         if (!NotificationManagerCompat.from(ctx).areNotificationsEnabled()) return false
-        ensureChannel(ctx)
-        val ch = ctx.getSystemService(NotificationManager::class.java).getNotificationChannel(CHANNEL)
+        val id = ensureChannel(ctx, s)
+        val ch = ctx.getSystemService(NotificationManager::class.java).getNotificationChannel(id)
         return ch == null || ch.importance != NotificationManager.IMPORTANCE_NONE
     }
 
     /** Kilit ekranında yalnızca "Abonelik Avcısı · hatırlatma" görünür; tutar gizli kalır. */
-    fun show(ctx: Context, id: Int, title: String, body: String) {
-        ensureChannel(ctx)
+    fun show(ctx: Context, s: ReminderSettings, id: Int, title: String, body: String) {
+        val channel = ensureChannel(ctx, s)
         val open = PendingIntent.getActivity(
             ctx, 0, Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
-        val public = NotificationCompat.Builder(ctx, CHANNEL)
+        val public = NotificationCompat.Builder(ctx, channel)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle("Abonelik Avcısı")
             .setContentText("Hatırlatma")
             .build()
-        val n = NotificationCompat.Builder(ctx, CHANNEL)
+        val n = NotificationCompat.Builder(ctx, channel)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(title)
             .setContentText(body)

@@ -66,5 +66,15 @@ class RepositoryTest {
         assertEquals(ReminderSettings(), store.flow.first())
         store.update { it.copy(time = LocalTime.of(8, 30), dueDaysBefore = 3, subOn = false) }
         assertEquals(ReminderSettings(time = LocalTime.of(8, 30), dueDaysBefore = 3, subOn = false), store.flow.first())
+        store.update { it.copy(notificationsOn = false, sound = false, vibrate = false) }
+        val s = store.flow.first()
+        assertEquals(false, s.notificationsOn); assertEquals(false, s.sound); assertEquals(false, s.vibrate)
+    }
+
+    @Test fun theme_round_trip() = runTest {
+        val store = SettingsStore(ctx)
+        assertEquals(com.ibrah.abonelik.core.ThemeMode.SYSTEM, store.theme.first())
+        store.setTheme(com.ibrah.abonelik.core.ThemeMode.DARK)
+        assertEquals(com.ibrah.abonelik.core.ThemeMode.DARK, store.theme.first())
     }
 }

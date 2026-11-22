@@ -99,7 +99,8 @@ fun HomeScreen(
 private fun TotalCard(monthly: String, yearly: String, count: Int) {
     Surface(
         Modifier.fillMaxWidth().padding(top = 8.dp), shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.primary,
+        // Koyu temada da marka yeşili: açık nane rengi üstünde beyaz yazı okunmuyordu.
+        color = AppColors.Brand,
     ) {
         Column(Modifier.padding(22.dp)) {
             Text("Aylık toplam", color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.labelLarge)

@@ -37,6 +37,7 @@ import com.ibrah.abonelik.core.Sub
 import kotlinx.coroutines.flow.map
 import com.ibrah.abonelik.data.Repository
 import com.ibrah.abonelik.data.SettingsStore
+import com.ibrah.abonelik.notify.Notifications
 import com.ibrah.abonelik.reminders.CatchUp
 import java.time.LocalDate
 import java.util.UUID
@@ -60,6 +61,7 @@ fun AppNav() {
     val subs = subsOrNull.orEmpty()
     val cards = cardsOrNull.orEmpty()
     val settings by store.flow.collectAsState(initial = ReminderSettings())
+    val theme by store.theme.collectAsState(initial = com.ibrah.abonelik.core.ThemeMode.SYSTEM)
     var tab by rememberSaveable { mutableStateOf(0) }
     var editingSub by rememberSaveable { mutableStateOf<String?>(null) }   // id ya da NEW
     var editingCard by rememberSaveable { mutableStateOf<String?>(null) }
@@ -117,13 +119,18 @@ fun AppNav() {
     if (showSettings) {
         SettingsScreen(
             settings,
+            theme = theme,
+            onTheme = { t -> scope.launch { store.setTheme(t) } },
             onChange = { f ->
                 scope.launch {
                     val old = store.current()
                     store.update(f)
                     withContext(Dispatchers.IO) {
                         runCatching {
-                            if (SettingsChange.needsCatchUp(old, store.current())) CatchUp.run(ctx) else CatchUp.reschedule(ctx)
+                            val new = store.current()
+                            // Ses/titreşim değişince kanal hemen yenilensin (telefon ayarlarında da doğru görünsün).
+                            Notifications.ensureChannel(ctx, new)
+                            if (SettingsChange.needsCatchUp(old, new)) CatchUp.run(ctx) else CatchUp.reschedule(ctx)
                         }
                     }
                 }
@@ -157,7 +164,7 @@ fun AppNav() {
         if (tab == 0) {
             HomeScreen(
                 subs, cards, today,
-                banner = { SetupBanner(onGranted = { catchUp() }) },
+                banner = { SetupBanner(settings, onGranted = { catchUp() }) },
                 onAdd = { editingSub = NEW },
                 onOpen = { editingSub = it.id },
                 onOpenCard = { editingCard = it.id },

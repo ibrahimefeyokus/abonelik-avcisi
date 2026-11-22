@@ -13,6 +13,10 @@ data class ReminderSettings(
     val subOn: Boolean = true,
     val statementOn: Boolean = true,
     val dueOn: Boolean = true,
+    /** Uygulama içi ana düğme; kapalıyken hiçbir hatırlatma gösterilmez. */
+    val notificationsOn: Boolean = true,
+    val sound: Boolean = true,
+    val vibrate: Boolean = true,
 ) {
     /** Önceden hatırlatma 0–7 gün; telafi penceresi de bu yüzden en fazla 7 gün. */
     fun normalized() = copy(subDaysBefore = subDaysBefore.coerceIn(0, 7), dueDaysBefore = dueDaysBefore.coerceIn(0, 7))

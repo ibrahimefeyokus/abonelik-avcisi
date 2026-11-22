@@ -72,7 +72,7 @@ object Setup {
 
 /** "Hatırlatmalar için kurulum eksik" bandı: bildirim izni ve pil kısıtlaması. Her açılışta yeniden denetlenir. */
 @Composable
-fun SetupBanner(onGranted: () -> Unit) {
+fun SetupBanner(settings: com.ibrah.abonelik.core.ReminderSettings, onGranted: () -> Unit) {
     val ctx = LocalContext.current
     var tick by remember { mutableIntStateOf(0) }
     val owner = LocalLifecycleOwner.current
@@ -86,7 +86,9 @@ fun SetupBanner(onGranted: () -> Unit) {
         if (ok) onGranted()
     }
     @Suppress("UNUSED_EXPRESSION") tick
-    val notif = Setup.notificationsGranted(ctx) && com.ibrah.abonelik.notify.Notifications.enabled(ctx)
+    // Bildirimleri uygulamadan bilerek kapattıysa uyarma; açıkken telefon engelliyorsa uyar.
+    val notif = !settings.notificationsOn ||
+        (Setup.notificationsGranted(ctx) && com.ibrah.abonelik.notify.Notifications.systemAllows(ctx, settings))
     val battery = Setup.batteryUnrestricted(ctx)
     val autoStartDone = Setup.autoStartAcknowledged(ctx)
     if (notif && battery && autoStartDone) return

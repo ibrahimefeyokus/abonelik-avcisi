@@ -36,51 +36,56 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.ibrah.abonelik.core.ReminderSettings
+import com.ibrah.abonelik.core.ThemeMode
 import java.time.LocalTime
+
+private typealias Change = ((ReminderSettings) -> ReminderSettings) -> Unit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(settings: ReminderSettings, onChange: ((ReminderSettings) -> ReminderSettings) -> Unit, onClose: () -> Unit) {
+fun SettingsScreen(
+    settings: ReminderSettings,
+    theme: ThemeMode,
+    onTheme: (ThemeMode) -> Unit,
+    onChange: Change,
+    onClose: () -> Unit,
+) {
     var picking by remember { mutableStateOf(false) }
     BackHandler(onBack = onClose)
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onClose) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Geri") }
-            Text("Hatırlatma ayarları", style = MaterialTheme.typography.titleLarge)
+            Text("Ayarlar", style = MaterialTheme.typography.titleLarge)
         }
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
+            SectionTitle("Görünüm")
+            Segmented(ThemeMode.entries.map { it to it.label }, theme, onTheme)
+
+            SectionTitle("Bildirimler")
             CardBox {
-                SettingRow("Bildirim saati", "Hatırlatmalar her gün bu saatte gelir",
-                    Modifier.clickable { picking = true }) {
-                    Text("%02d:%02d".format(settings.time.hour, settings.time.minute), style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary)
+                SettingRow("Bildirimler", if (settings.notificationsOn) "Hatırlatmalar bildirim olarak gelir" else "Hiçbir hatırlatma gelmez") {
+                    Switch(settings.notificationsOn, { v -> onChange { it.copy(notificationsOn = v) } })
+                }
+                if (settings.notificationsOn) {
+                    Divider()
+                    SettingRow("Ses", if (settings.sound) "Telefonun bildirim sesi" else "Sessiz") {
+                        Switch(settings.sound, { v -> onChange { it.copy(sound = v) } })
+                    }
+                    Divider()
+                    SettingRow("Titreşim", null) { Switch(settings.vibrate, { v -> onChange { it.copy(vibrate = v) } }) }
+                    Divider()
+                    SettingRow("Bildirim saati", "Hatırlatmalar her gün bu saatte gelir", Modifier.clickable { picking = true }) {
+                        Text("%02d:%02d".format(settings.time.hour, settings.time.minute),
+                            style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                    }
                 }
             }
-            SectionTitle("Abonelikler")
-            CardBox {
-                SettingRow("Yenilenme hatırlatması", null) { Switch(settings.subOn, { v -> onChange { it.copy(subOn = v) } }) }
-                Divider()
-                SettingRow("Kaç gün önce?", if (settings.subDaysBefore == 0) "yenilenme günü" else "${settings.subDaysBefore} gün önce") {
-                    Stepper(settings.subDaysBefore) { n -> onChange { it.copy(subDaysBefore = n) } }
-                }
+            if (!settings.notificationsOn) {
+                Note("Kapalıyken günü gelen hatırlatmalar atlanır; tekrar açınca geçmişler toplu gelmez.")
+            } else {
+                ReminderKinds(settings, onChange)
+                Note("Telefon kapalıyken kaçan hatırlatmalar, tarihi geçmediyse telefon açılınca ya da uygulamaya girince gelir.")
             }
-            SectionTitle("Kredi kartları")
-            CardBox {
-                SettingRow("Hesap kesim günü hatırlatması", "Kesim günü sabahı") {
-                    Switch(settings.statementOn, { v -> onChange { it.copy(statementOn = v) } })
-                }
-                Divider()
-                SettingRow("Son ödeme hatırlatması", null) { Switch(settings.dueOn, { v -> onChange { it.copy(dueOn = v) } }) }
-                Divider()
-                SettingRow("Kaç gün önce?", if (settings.dueDaysBefore == 0) "son ödeme günü" else "${settings.dueDaysBefore} gün önce") {
-                    Stepper(settings.dueDaysBefore) { n -> onChange { it.copy(dueDaysBefore = n) } }
-                }
-            }
-            Text(
-                "Telefon kapalıyken kaçan hatırlatmalar, tarihi geçmediyse telefon açılınca ya da uygulamaya girince gelir.",
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(vertical = 16.dp),
-            )
         }
     }
     if (picking) {
@@ -97,6 +102,36 @@ fun SettingsScreen(settings: ReminderSettings, onChange: ((ReminderSettings) -> 
         )
     }
 }
+
+@Composable
+private fun ReminderKinds(settings: ReminderSettings, onChange: Change) {
+    SectionTitle("Abonelikler")
+    CardBox {
+        SettingRow("Yenilenme hatırlatması", null) { Switch(settings.subOn, { v -> onChange { it.copy(subOn = v) } }) }
+        Divider()
+        SettingRow("Kaç gün önce?", if (settings.subDaysBefore == 0) "yenilenme günü" else "${settings.subDaysBefore} gün önce") {
+            Stepper(settings.subDaysBefore) { n -> onChange { it.copy(subDaysBefore = n) } }
+        }
+    }
+    SectionTitle("Kredi kartları")
+    CardBox {
+        SettingRow("Hesap kesim günü hatırlatması", "Kesim günü") {
+            Switch(settings.statementOn, { v -> onChange { it.copy(statementOn = v) } })
+        }
+        Divider()
+        SettingRow("Son ödeme hatırlatması", null) { Switch(settings.dueOn, { v -> onChange { it.copy(dueOn = v) } }) }
+        Divider()
+        SettingRow("Kaç gün önce?", if (settings.dueDaysBefore == 0) "son ödeme günü" else "${settings.dueDaysBefore} gün önce") {
+            Stepper(settings.dueDaysBefore) { n -> onChange { it.copy(dueDaysBefore = n) } }
+        }
+    }
+}
+
+@Composable
+private fun Note(text: String) = Text(
+    text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+    modifier = Modifier.padding(vertical = 16.dp),
+)
 
 @Composable
 private fun Divider() = HorizontalDivider(Modifier.padding(start = 16.dp), color = MaterialTheme.colorScheme.outlineVariant)
