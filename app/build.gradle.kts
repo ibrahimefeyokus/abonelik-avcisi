@@ -44,7 +44,10 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // Kullanılmayan kod ve simgeler atılır (geniş simge paketi yüzünden APK ~47 MB oluyordu).
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
             isDebuggable = false
             signingConfig = signingConfigs.findByName("release")
         }
