@@ -106,3 +106,11 @@ bağlanması; yıllık = 1/12; kart numarası yok; TL + elle kur; 1 gün / kesim
 
 ## Geliştiriciye kalanlar
 Renk paleti, simgeler, ekranların piksel ayrıntıları, boş durum metinleri, ayarlar ekranının düzeni, bildirim metinleri.
+
+## Sürüm 1.1 — görünüm iyileştirmeleri (kullanıcı onayladı, 22 Kasım)
+1. **Kurulum:** ana ekranda büyük bant yerine tek satır "Kurulum eksik (N) ›"; dokununca ayrı Kurulum ekranı
+   (bildirim izni, pil kısıtlaması, otomatik başlatma — her biri ✓/✗ ve düğme). Hepsi tamamsa satır görünmez.
+2. **Dağılım:** toplam kartının altında en pahalı 3 abonelik + "Diğer" için oranlı renkli çubuk ve yüzdeli liste
+   (aylık karşılık üzerinden, duraklatılanlar hariç).
+3. **Simge:** her aboneliğe isteğe bağlı simge (≈16 seçenek; boşsa baş harf). Room v1→v2 otomatik geçiş, eski veriler korunur.
+4. Küçükler: yıllık satırda "≈ X TL/ay"; son ödeme satırında tarih ("1 Aralık · 9 gün").
