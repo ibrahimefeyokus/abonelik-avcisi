@@ -16,6 +16,7 @@ local.properties
 *.pem
 keystore.properties
 signing.properties
+abonelik.properties
 *.apk
 *.aab
 
@@ -23,3 +24,5 @@ signing.properties
 .superpowers/
 *.png
 !app/src/main/res/**/*.png
+# README ekran görüntüleri (deneme verisi)
+!docs/ekran/*.png
