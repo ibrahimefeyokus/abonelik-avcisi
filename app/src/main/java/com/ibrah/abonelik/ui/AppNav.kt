@@ -29,7 +29,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.LaunchedEffect
+import com.ibrah.abonelik.core.Card
 import com.ibrah.abonelik.core.ReminderSettings
+import com.ibrah.abonelik.core.SettingsChange
+import com.ibrah.abonelik.core.Sub
+import kotlinx.coroutines.flow.map
 import com.ibrah.abonelik.data.Repository
 import com.ibrah.abonelik.data.SettingsStore
 import com.ibrah.abonelik.reminders.CatchUp
@@ -47,8 +52,13 @@ fun AppNav() {
     val scope = rememberCoroutineScope()
     val repo = remember { Repository.get(ctx) }
     val store = remember { SettingsStore(ctx) }
-    val subs by repo.subs.collectAsState(initial = emptyList())
-    val cards by repo.cards.collectAsState(initial = emptyList())
+    // null = henüz yüklenmedi. Döndürme/süreç ölümü sonrası ilk karede boş liste görülüp
+    // açık düzenleyici kapatılmasın (yazılanlar kaybolmasın).
+    val subsOrNull by remember { repo.subs.map<List<Sub>, List<Sub>?> { it } }.collectAsState(initial = null)
+    val cardsOrNull by remember { repo.cards.map<List<Card>, List<Card>?> { it } }.collectAsState(initial = null)
+    val loaded = subsOrNull != null && cardsOrNull != null
+    val subs = subsOrNull.orEmpty()
+    val cards = cardsOrNull.orEmpty()
     val settings by store.flow.collectAsState(initial = ReminderSettings())
     var tab by rememberSaveable { mutableStateOf(0) }
     var editingSub by rememberSaveable { mutableStateOf<String?>(null) }   // id ya da NEW
@@ -60,13 +70,19 @@ fun AppNav() {
     fun catchUp() = scope.launch { withContext(Dispatchers.IO) { runCatching { CatchUp.run(ctx) } } }
 
     editingSub?.let { id ->
+        if (!loaded) return  // veriler gelene kadar bekle; düzenleyici durumu korunur
         val existing = subs.firstOrNull { it.id == id }
-        if (id != NEW && existing == null) { editingSub = null; return@let }
+        if (id != NEW && existing == null) {
+            LaunchedEffect(id) { editingSub = null } // silinmiş
+            return
+        }
+        // Yeni öğenin kimliği oturum boyunca sabit: "Kaydet"e iki kez basmak çift kayıt yaratmaz (upsert).
+        val saveId = rememberSaveable(id) { existing?.id ?: UUID.randomUUID().toString() }
         SubEditor(
             existing = existing, defaultColor = subs.size % 12, cards = cards,
             onSave = { f ->
                 scope.launch {
-                    repo.saveSub(f.toSub(existing?.id ?: UUID.randomUUID().toString()))
+                    repo.saveSub(f.toSub(saveId))
                     editingSub = null
                     catchUp()
                 }
@@ -77,13 +93,18 @@ fun AppNav() {
         return
     }
     editingCard?.let { id ->
+        if (!loaded) return
         val existing = cards.firstOrNull { it.id == id }
-        if (id != NEW && existing == null) { editingCard = null; return@let }
+        if (id != NEW && existing == null) {
+            LaunchedEffect(id) { editingCard = null }
+            return
+        }
+        val saveId = rememberSaveable(id) { existing?.id ?: UUID.randomUUID().toString() }
         CardEditor(
             existing = existing, defaultColor = (cards.size + 3) % 12, linkedCount = subs.count { it.cardId == id },
             onSave = { f ->
                 scope.launch {
-                    repo.saveCard(f.toCard(existing?.id ?: UUID.randomUUID().toString()))
+                    repo.saveCard(f.toCard(saveId))
                     editingCard = null
                     catchUp()
                 }
@@ -96,7 +117,17 @@ fun AppNav() {
     if (showSettings) {
         SettingsScreen(
             settings,
-            onChange = { f -> scope.launch { store.update(f); catchUp() } },
+            onChange = { f ->
+                scope.launch {
+                    val old = store.current()
+                    store.update(f)
+                    withContext(Dispatchers.IO) {
+                        runCatching {
+                            if (SettingsChange.needsCatchUp(old, store.current())) CatchUp.run(ctx) else CatchUp.reschedule(ctx)
+                        }
+                    }
+                }
+            },
             onClose = { showSettings = false },
         )
         return

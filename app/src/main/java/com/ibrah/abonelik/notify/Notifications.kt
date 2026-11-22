@@ -23,7 +23,13 @@ object Notifications {
         )
     }
 
-    fun enabled(ctx: Context) = NotificationManagerCompat.from(ctx).areNotificationsEnabled()
+    /** Uygulama bildirimleri açık VE "Hatırlatmalar" kanalı kapatılmamış. */
+    fun enabled(ctx: Context): Boolean {
+        if (!NotificationManagerCompat.from(ctx).areNotificationsEnabled()) return false
+        ensureChannel(ctx)
+        val ch = ctx.getSystemService(NotificationManager::class.java).getNotificationChannel(CHANNEL)
+        return ch == null || ch.importance != NotificationManager.IMPORTANCE_NONE
+    }
 
     /** Kilit ekranında yalnızca "Abonelik Avcısı · hatırlatma" görünür; tutar gizli kalır. */
     fun show(ctx: Context, id: Int, title: String, body: String) {

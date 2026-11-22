@@ -13,6 +13,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.FilledTonalButton
@@ -39,6 +40,22 @@ object Setup {
 
     fun batteryUnrestricted(ctx: Context) =
         ctx.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(ctx.packageName)
+
+    private fun prefs(ctx: Context) = ctx.getSharedPreferences("setup", Context.MODE_PRIVATE)
+
+    /** ColorOS'un otomatik başlatma ayarı uygulamadan okunamaz; kullanıcı "Yaptım" deyince bant kapanır. */
+    fun autoStartAcknowledged(ctx: Context) = prefs(ctx).getBoolean("autostart_ack", false)
+    fun acknowledgeAutoStart(ctx: Context) = prefs(ctx).edit().putBoolean("autostart_ack", true).apply()
+
+    fun openAppDetails(ctx: Context) {
+        val i = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${ctx.packageName}"))
+        runCatching { ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+    }
+
+    fun openNotificationSettings(ctx: Context) {
+        val i = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, ctx.packageName)
+        runCatching { ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+    }
 
     /** Realme/ColorOS'ta arka plan kapatmasın diye pil kısıtlamasını kaldırma ekranı; olmazsa uygulama ayrıntıları. */
     @SuppressLint("BatteryLife")
@@ -69,17 +86,32 @@ fun SetupBanner(onGranted: () -> Unit) {
         if (ok) onGranted()
     }
     @Suppress("UNUSED_EXPRESSION") tick
-    val notif = Setup.notificationsGranted(ctx)
+    val notif = Setup.notificationsGranted(ctx) && com.ibrah.abonelik.notify.Notifications.enabled(ctx)
     val battery = Setup.batteryUnrestricted(ctx)
-    if (notif && battery) return
+    val autoStartDone = Setup.autoStartAcknowledged(ctx)
+    if (notif && battery && autoStartDone) return
 
     Surface(Modifier.fillMaxWidth().padding(top = 8.dp), shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.errorContainer) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Hatırlatmalar için kurulum eksik", style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onErrorContainer)
-            if (!notif) BannerRow("Bildirim izni yok: hatırlatmalar gelmez.", "İzin ver") {
-                launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            if (!notif) BannerRow("Bildirimler kapalı: hatırlatmalar gelmez.", "İzin ver") {
+                // İzin hiç sorulmadıysa sistem penceresi; reddedildiyse ya da kanal kapatıldıysa bildirim ayarları.
+                if (!Setup.notificationsGranted(ctx)) launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                else Setup.openNotificationSettings(ctx)
+            }
+            if (!autoStartDone) {
+                BannerRow(
+                    "Realme: Ayarlar > Uygulamalar > Abonelik Avcısı'nda \"Otomatik başlatma\" ve \"Arka planda çalışmaya izin ver\" açık olsun; yoksa telefon yeniden başlayınca hatırlatmalar uygulamayı açana kadar gelmez.",
+                    "Ayarla",
+                ) { Setup.openAppDetails(ctx) }
+                Row(Modifier.fillMaxWidth()) {
+                    Spacer(Modifier.weight(1f))
+                    androidx.compose.material3.TextButton({ Setup.acknowledgeAutoStart(ctx); tick++ }) {
+                        Text("Yaptım", color = MaterialTheme.colorScheme.onErrorContainer)
+                    }
+                }
             }
             if (!battery) BannerRow("Pil kısıtlaması açık: telefon uygulamayı kapatıp hatırlatmayı geciktirebilir.", "Ayarla") {
                 Setup.openBattery(ctx)

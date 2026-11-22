@@ -28,10 +28,18 @@ import kotlinx.coroutines.sync.withLock
 object CatchUp {
     private val lock = Mutex()
 
+    /** Yalnızca günlük alarmı yeniden kurar (ayar denemeleri bildirim yağdırmasın diye). */
+    suspend fun reschedule(context: Context, now: LocalDateTime = LocalDateTime.now()) {
+        val ctx = context.applicationContext
+        DailyAlarm.schedule(ctx, AlarmTime.next(now, SettingsStore(ctx).current().time))
+    }
+
     suspend fun run(context: Context, now: LocalDateTime = LocalDateTime.now()) = lock.withLock {
         val ctx = context.applicationContext
         val repo = Repository.get(ctx)
         val settings = SettingsStore(ctx).current()
+        // Önce alarm: aşağıda bir hata olsa bile günlük zincir kopmasın.
+        DailyAlarm.schedule(ctx, AlarmTime.next(now, settings.time))
         val subs = repo.subsNow()
         val cards = repo.cardsNow()
         // Bildirim izni yoksa hiçbir şey "gönderildi" sayılmaz; izin verilince telafi edilir.
@@ -49,7 +57,6 @@ object CatchUp {
             if (shown.isNotEmpty()) repo.markSent(shown, today)
             repo.pruneSent(today.minusDays(30))
         }
-        DailyAlarm.schedule(ctx, AlarmTime.next(now, settings.time))
         // Gün değişince "yarın / N gün" etiketleri ve yaklaşanlar widget'ta da güncellensin.
         com.ibrah.abonelik.widget.WidgetUpdater.update(ctx)
     }
@@ -58,7 +65,8 @@ object CatchUp {
     fun runAsync(receiver: BroadcastReceiver, context: Context) {
         val pending = receiver.goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
-            try { run(context) } finally { pending.finish() }
+            // Veri/I-O hatası alıcıda süreci çökertmesin; bir sonraki açılış ya da alarm yeniden dener.
+            try { runCatching { run(context) } } finally { pending.finish() }
         }
     }
 }

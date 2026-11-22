@@ -1,6 +1,8 @@
 package com.ibrah.abonelik.widget
 
 import android.content.Context
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -68,8 +70,14 @@ class SubsWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val repo = Repository.get(context)
-        val model = WidgetModel.build(repo.subsNow(), repo.cardsNow(), LocalDate.now())
-        provideContent { Content(model) }
+        val firstSubs = repo.subsNow()
+        val firstCards = repo.cardsNow()
+        // Veri içerikte akıştan okunur: Glance oturumu açıkken arka arkaya yapılan değişiklikler de yansır.
+        provideContent {
+            val subs by repo.subs.collectAsState(initial = firstSubs)
+            val cards by repo.cards.collectAsState(initial = firstCards)
+            Content(WidgetModel.build(subs, cards, LocalDate.now()))
+        }
     }
 
     @androidx.compose.runtime.Composable

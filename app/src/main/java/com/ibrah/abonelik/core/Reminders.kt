@@ -64,6 +64,15 @@ object ReminderPlanner {
     }
 }
 
+/**
+ * Ayar değişince telafi gerekip gerekmediği. Gün sayısı ya da aç/kapa denemeleri anında telafi yapsaydı
+ * önceden hatırlatma günü geriye kayan her öğe hemen "kaçırıldı" sayılıp bildirilirdi; yalnızca saat
+ * değişince (geri alınınca bugünkü hemen gelsin) çalışır. Diğerlerinde yalnızca alarm yeniden kurulur.
+ */
+object SettingsChange {
+    fun needsCatchUp(old: ReminderSettings, new: ReminderSettings) = old.time != new.time
+}
+
 object AlarmTime {
     /** Bugün saat henüz gelmediyse bugün, yoksa yarın. */
     fun next(now: LocalDateTime, time: LocalTime): LocalDateTime {
