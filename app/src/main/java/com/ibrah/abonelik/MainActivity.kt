@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
 import com.ibrah.abonelik.reminders.CatchUp
+import com.ibrah.abonelik.ui.AppNav
 import com.ibrah.abonelik.ui.theme.AppTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -23,11 +24,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             AppTheme {
-                Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text("Abonelik Avcısı", style = MaterialTheme.typography.headlineMedium)
-                    }
-                }
+                Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { AppNav() }
             }
         }
     }
