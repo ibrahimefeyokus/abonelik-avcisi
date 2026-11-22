@@ -26,6 +26,10 @@ object Money {
 
     fun format(kurus: Long): String = format(BigDecimal.valueOf(kurus))
 
+    /** Kendi para biriminde: "20,00 $", "229,99 TL". */
+    fun formatIn(kurus: Long, currency: Currency): String =
+        format(kurus).removeSuffix(" TL") + " " + currency.symbol
+
     /** Yuvarlamasız kuruş tutarını gösterim için kuruşa (HALF_UP) yuvarlar. */
     fun format(kurus: BigDecimal): String {
         val lira = kurus.setScale(0, RoundingMode.HALF_UP).movePointLeft(2)

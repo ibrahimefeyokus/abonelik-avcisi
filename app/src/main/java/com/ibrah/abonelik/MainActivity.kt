@@ -11,7 +11,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.lifecycleScope
+import com.ibrah.abonelik.reminders.CatchUp
 import com.ibrah.abonelik.ui.theme.AppTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -26,5 +30,11 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    /** Her açılışta kaçırılan hatırlatmaları telafi et ve günlük alarmı yeniden kur. */
+    override fun onResume() {
+        super.onResume()
+        lifecycleScope.launch(Dispatchers.IO) { runCatching { CatchUp.run(applicationContext) } }
     }
 }
